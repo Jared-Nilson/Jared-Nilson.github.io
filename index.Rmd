@@ -1,0 +1,13 @@
+---
+output: html_document
+---
+
+#Jared NIlson
+
+This is my website welcome!!
+
+
+
+```{r echo=FALSE}
+knitr::include_graphics(.\media\Bananaman.jpg)
+```
