@@ -2,12 +2,17 @@
 output: html_document
 ---
 
-#Jared NIlson
+# Jared Nilson
 
 This is my website welcome!!
 
+[Resume Link](https://Jared-Nilson.github.io/about.me/Jared_Nilson_Resume_2023)
+___
 
+AND THIS IS BANANA MAN
 
 ```{r echo=FALSE}
-knitr::include_graphics(.\media\Bananaman.jpg)
+knitr::include_graphics("./media/Bananaman.jpg")
 ```
+
+___
