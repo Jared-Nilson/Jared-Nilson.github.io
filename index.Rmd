@@ -6,7 +6,7 @@ output: html_document
 
 This is my website welcome!!
 
-[Resume Link](https://Jared-Nilson.github.io/about.me/Jared_Nilson_Resume_2023)
+[Resume Link](https://Jared-Nilson.github.io/about.me/Jared_Nilson_Resume_2023.pdf)
 ___
 
 AND THIS IS BANANA MAN
