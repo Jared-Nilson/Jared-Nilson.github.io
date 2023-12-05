@@ -165,67 +165,56 @@ From this graph we can firstly see there are more males enrolled than females, a
 # Prediction Model
 After this I wanted to try to make a model that could predict whether or not someone would get their degree with as many relevant variables as R could handle.
 
-I made one model with the variables seen in the code added together and one multiplied(with one added because it couldn't handle them all multiplied). Compared them and then attempted to plot the predictions. I again had to take a random sample and cut up the ACT column into ranges.
+I made one model with the variables seen in the code added together and one multiplied(with one added because it couldn't handle them all multiplied). Compared them and then attempted to plot the predictions. Using the entire data set worth of rows.
+
 ```{r}
-#have to take sample because model too large
-
 df <- cleaned_data_not_checked[c("DEGREE","ACT_COMPOSITE","FREEZE_OF_RECORD","FREEZE_TER","CURRENT_MAJOR_NAME","GENDER_DESC","PRIM_ETHNICITY_CATEGORY_DESC","BACH_GRAD_TERM","ASSOC_GRAD_TERM","TERM_TOTAL_CREDITS","FIRST_YEAR","LENGTH_OF_ENROLLMENT")]
-
-df$ACT_Range <- cut(df$ACT_COMPOSITE,
-                    breaks = c(-Inf, 0, 10, 15, 20, 24, 36, Inf),
-                    labels = c("No_ACT", "0-10", "11-15", "16-20", "21-24", "25-36", "No_ACT"),
-                    include.lowest = TRUE)
-df$ACT_Range <- fct_relevel(df$ACT_Range, levels(df$ACT_Range))
-# Convert NAs to "NO_ACT"
-df$ACT_Range <- fct_na_value_to_level(df$ACT_Range, "NO_ACT")
-
-df <- df %>%
-  mutate_at(vars("LENGTH_OF_ENROLLMENT","ACT_Range","FREEZE_OF_RECORD","FREEZE_TER","CURRENT_MAJOR_NAME","GENDER_DESC","PRIM_ETHNICITY_CATEGORY_DESC","BACH_GRAD_TERM","ASSOC_GRAD_TERM","TERM_TOTAL_CREDITS","FIRST_YEAR"),
-            as.factor)
-df$PRIM_ETHNICITY_CATEGORY_DESC <- as.factor(as.character(df$PRIM_ETHNICITY_CATEGORY_DESC))
 
 #had to check levels to see whhich ones didnt have enough levels because I kept getting an error
 library(MASS)
 
 #overall model that predicts whether they'll graduate based off everything the model can think of using quasibinomial
-set.seed(250)  # Set seed for reproducibility
-sample_indices <- sample(nrow(df), size = 300)  # Adjust the size as needed
-df_subset <- df[sample_indices, ]
 
-mod_simple_subset <- glm(DEGREE ~ ACT_Range + CURRENT_MAJOR_NAME + FREEZE_OF_RECORD + GENDER_DESC + PRIM_ETHNICITY_CATEGORY_DESC+ LENGTH_OF_ENROLLMENT,
-                         data = df_subset,
-                         family = "quasibinomial")
+mod_simple_subset <- glm(DEGREE ~ ACT_COMPOSITE + CURRENT_MAJOR_NAME + FREEZE_OF_RECORD + GENDER_DESC + PRIM_ETHNICITY_CATEGORY_DESC+ LENGTH_OF_ENROLLMENT,
+                         data = df,
+                         family = "binomial")
 
-mod_complicated_subset <- glm(DEGREE ~ ACT_Range * CURRENT_MAJOR_NAME * FREEZE_OF_RECORD + GENDER_DESC * PRIM_ETHNICITY_CATEGORY_DESC* LENGTH_OF_ENROLLMENT,
-                         data = df_subset,
-                         family = "quasibinomial")
+mod_complicated_subset <- glm(DEGREE ~ ACT_COMPOSITE * CURRENT_MAJOR_NAME * FREEZE_OF_RECORD + GENDER_DESC * PRIM_ETHNICITY_CATEGORY_DESC* LENGTH_OF_ENROLLMENT,
+                         data = df,
+                         family = "binomial")
+#saveRDS(mod_complicated_subset, "./bigmodel.RDS")
+#beepr::beep(sound=8)
 
 compare_performance(mod_simple_subset,mod_complicated_subset)
 
+#made to check levels of the data set and print them out 
+#df_subset.asfactor <- df_subset %>%
+#  mutate_at(vars("LENGTH_OF_ENROLLMENT","ACT_COMPOSITE","FREEZE_OF_RECORD","FREEZE_TER","CURRENT_MAJOR_NAME","GENDER_DESC","PRIM_ETHNICITY_CATEGORY_DESC","BACH_GRAD_TERM","ASSOC_GRAD_TERM","TERM_TOTAL_CREDITS","FIRST_YEAR"),
+ #           as.factor)
+#
+#for (predictor in names(df_subset.asfactor)[categorical_predictors]) {
+ # cat("Predictor:", predictor, "\n")
+  #cat("Levels:", unique(df_subset.asfactor[[predictor]]), "\n\n")
+#}
 
-df_subset<-add_predictions(df_subset,mod_complicated_subset,type='response') 
 
-df_subset[c("pred")]%>%print(n=25)#column of pred are percentages
-#checking to see if my predictions worked ^^
+df_subset<-add_predictions(df,mod_complicated_subset,type='response') 
+
 ```
-# Plot 4
 
-# not sure why my predictions are all messed up for both models this is my largest issue still please review
 
 ```{r}
-
-
-add_predictions(df_subset,mod_simple_subset,type='response')%>%
-  ggplot(aes(x=ACT_Range,y=pred,color=factor(CURRENT_MAJOR_NAME))) +
-  geom_smooth()+
+df_subset %>%
+  filter(!is.na(GENDER_DESC)) %>% 
+  ggplot(aes(x=ACT_COMPOSITE,y=pred,color=factor(CURRENT_MAJOR_NAME))) +
+  geom_smooth(size = 2,method="lm",formula = y ~ poly(x,3))+
   facet_grid(GENDER_DESC ~ .)+
-  labs(x = "ACT_RANGE", y = "Predicted Likliehood to get Degree", title = NULL) +
-  theme( 
+  labs(x = "ACT Score", y = "Predicted Likliehood to get Degree", title = NULL,) +
+  theme(
     legend.position = "right",  # Position the legend
     strip.text.x = element_text(size = 12, face = "bold"),
     strip.background = element_rect(fill = "lightblue"))
   
 
 ```
-My predictions are all messed up for some reason so they don't show up on the graph. Not sure what the NA gender is either 
 
