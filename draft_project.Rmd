@@ -1,5 +1,5 @@
 ---
-title: "draft_project"
+title: "Final Project"
 output:
   html_document:
     code_folding: hide
@@ -75,7 +75,6 @@ df2$ACT_Range <- cut(df2$ACT_COMPOSITE,
 # Convert NAs to "NO_ACT"
 df2$ACT_Range <- fct_na_value_to_level(df2$ACT_Range, "NO_ACT")
 
-print(df2)
 ```
 # Plot 2
 ```{r}
@@ -107,12 +106,12 @@ bachmod <- glm(data=df2, formula = YEARS_TO_BACH ~ ACT_Range)
 summary(bachmod)
 
 ```
-This could also possibly show that those that didn't take or weren't able to take the ACT possibly have some confounding variables in their lives making it take longer to graduate. I wasn't really able to find much connection though between the students that had no ACT score. There might be one but I couldn't find it using the data in this set. 
+This could also possibly show that those that didn't take or weren't able to take the ACT possibly have some confounding variables in their lives making it take longer to graduate. I wasn't really able to find much connection though between the students that had no ACT score. There might be one but I couldn't find it using the data in this set. It also appears that when it comes to students with higher ACT's their score seems to be less significant than those with low scores. My conclusion is that lower ACT score students usually take longer in general to get their degree and those with higher scores vary more.
 
 # Credits over Time
 
 Next I wanted to try to visualize when students took large breaks from school so I looked at credits earned or passed linked to year or term for each student in a scatter in hopes to show plateau of when people leave for a while.
-I made another dataset but it still had to many values for me to manipulate and plot it so I took a random sample of the students and used that.
+I made another dataset but it still had too many values for me to manipulate and plot it so I took a random sample of the students and used that.
 ```{r}
 
 #have to use previous filtered dataset so we can sort by majors
@@ -142,7 +141,7 @@ df_sample <- df3[df3$STUDENT_WAREHOUSE_ENTITY_UID %in% sample_students, ]
 
 Then I plotted it colored by major and faceted by gender.
 
-```{r}
+```{r ,fig.height=8, fig.width=9}
 # Create the plot
 
 major_palette <- c("Biology" = "#23925A", "Biotechnology" = "#970A0A", "Biology Education" = "#256CD3", "Botany" = "#2F11AC")
@@ -160,9 +159,9 @@ ggplot(df_sample, aes(x = ACADEMIC_PERIOD, y = Cumulative_Credits, group = STUDE
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
   )
 ```
-From this graph we can firstly see there are more males enrolled than females, and see that the females take longer breaks more often possibly due to motherhod or other possible reasons.
+From this graph we can firstly see there are more males enrolled than females, and see that the females take longer breaks more often possibly due to motherhood or other possible reasons.
 
-# Prediction Model
+# Prediction Models
 After this I wanted to try to make a model that could predict whether or not someone would get their degree with as many relevant variables as R could handle.
 
 I made one model with the variables seen in the code added together and one multiplied(with one added because it couldn't handle them all multiplied). Compared them and then attempted to plot the predictions. Using the entire data set worth of rows.
@@ -179,7 +178,7 @@ mod_simple_subset <- glm(DEGREE ~ ACT_COMPOSITE + CURRENT_MAJOR_NAME + FREEZE_OF
                          data = df,
                          family = "binomial")
 
-mod_complicated_subset <- glm(DEGREE ~ ACT_COMPOSITE * CURRENT_MAJOR_NAME * FREEZE_OF_RECORD + GENDER_DESC * PRIM_ETHNICITY_CATEGORY_DESC* LENGTH_OF_ENROLLMENT,
+mod_complicated_subset <- glm(DEGREE ~  FREEZE_OF_RECORD * ACT_COMPOSITE * CURRENT_MAJOR_NAME + GENDER_DESC * PRIM_ETHNICITY_CATEGORY_DESC* LENGTH_OF_ENROLLMENT,
                          data = df,
                          family = "binomial")
 #saveRDS(mod_complicated_subset, "./bigmodel.RDS")
@@ -199,22 +198,51 @@ compare_performance(mod_simple_subset,mod_complicated_subset)
 
 
 df_subset<-add_predictions(df,mod_complicated_subset,type='response') 
-
 ```
 
 
-```{r}
+```{r, fig.height=8, fig.width=9}
 df_subset %>%
   filter(!is.na(GENDER_DESC)) %>% 
   ggplot(aes(x=ACT_COMPOSITE,y=pred,color=factor(CURRENT_MAJOR_NAME))) +
-  geom_smooth(size = 2,method="lm",formula = y ~ poly(x,3))+
+  geom_smooth(size = 2,method="lm",formula = y ~ poly(x,2))+
   facet_grid(GENDER_DESC ~ .)+
-  labs(x = "ACT Score", y = "Predicted Likliehood to get Degree", title = NULL,) +
+  labs(x = "ACT Score", y = "Predicted Likliehood to get Degree", title = NULL) +
   theme(
-    legend.position = "right",  # Position the legend
+    legend.position = "right", # Position the legend
     strip.text.x = element_text(size = 12, face = "bold"),
     strip.background = element_rect(fill = "lightblue"))
   
 
 ```
+This plot definitely subverted my expectations as most of the majors in male and female have a negative or almost no correlation with the ACT score. We can see though that almost no one in the whole dataset scored below 12 ACT other than some males with a biology major.
 
+```{r , fig.height=8, fig.width=11}
+
+df_subset %>%
+  filter(!is.na(GENDER_DESC)) %>% 
+  ggplot(aes(x=LENGTH_OF_ENROLLMENT,y=pred,color=factor(PRIM_ETHNICITY_CATEGORY_DESC))) +
+  geom_smooth(size = 2,method="lm",formula = y ~ poly(x,2))+
+  facet_grid(GENDER_DESC ~ .)+
+  labs(x = "Years of Enrollment", y = "Predicted Likliehood to get Degree", title = NULL)+
+  theme(
+    legend.position = "right", # Position the legend
+    strip.text.x = element_text(size = 12, face = "bold"),
+    strip.background = element_rect(fill = "lightblue"))+
+  scale_x_continuous(breaks = df_subset$LENGTH_OF_ENROLLMENT, labels = df_subset$LENGTH_OF_ENROLLMENT)
+
+```  
+
+The previous graph wasn't really telling enough so I changed the variables to ethnicity and years of enrollment. From this we can see that most of the races (as expected) have an increase in graduation probability as years enrollment increases, except interestingly female African-Americans. From this dataset I'm not really able to tell why this is exactly. We can also see that whites often attend the longest and have a gradual increase of likelihood with their length of enrollment where as with other races such as female asian seem to have a drop off of likelihood after about 7-8 years of enrollment. Asians also have the peak likelihood of graduation for both genders.
+
+# Discussion
+
+Originally I wanted to analyze multiple colleges in Utah with certain variables but finding complete and consistent enough data to compare was basically impossible as the only website I could find that maybe had all the data had them in separate pdfs for each year. If I were to do a similar project it would be interesting to work with that data and look for differences across the colleges, especially comparing community colleges to more prestigious universities like UofU and BYU. 
+
+There may be other small correlations to find in this UVU data set but the amount of different variables and NAs in tidy format makes it difficult to spot potential connections.
+
+# Conclusion
+
+Overall from what I looked into it seems that ACT score and whether or not a student took the ACT at all is significant in determining how long they'd be working on their degree. Clearly major, gender, and ethnicity have a role as well, either from the status quo of the students in certain majors working harder, gender roles and gender personality differences affecting major choice and possible maternity leave, or different cultural expectations/trends of different races. All of these showed some kinds of significance but it's hard to really tell with such a large and varying dataset of students with so many other confounding variables in their lives.
+
+This project made me learn how to handle an extremely large dataset in different ways in order to get out certain parts and analyze them. I was originally going to use a new modelling of quasibinomial but my model seemed to work better with regular binomial modelling.
